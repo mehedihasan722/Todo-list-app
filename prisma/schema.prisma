@@ -1,0 +1,71 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider      = "prisma-client-js"
+  binaryTargets = ["native", "linux-musl-arm64-openssl-3.0.x", "linux-musl-openssl-3.0.x", "rhel-openssl-1.0.x", "debian-openssl-3.0.x"]
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            String            @id @default(uuid())
+  name          String
+  email         String            @unique
+  emailVerified Boolean           @default(false)
+  password      String?
+  session       Session[]
+  verification  UserVerification?
+  todos         Todo[]            @relation("todos")
+  oauthAccount  OauthAccount?     @relation("oauthAccount")
+  createdAt     DateTime          @default(now())
+  updatedAt     DateTime          @updatedAt
+
+  @@map("users")
+}
+
+model Session {
+  id        String   @id @default(uuid())
+  expiresAt DateTime
+  user      User     @relation(references: [id], fields: [userId], onDelete: Cascade)
+  userId    String
+}
+
+model UserVerification {
+  id        String   @id @default(uuid())
+  code      String
+  expiresAt DateTime
+  user      User     @relation(references: [id], fields: [userId], onDelete: Cascade)
+  userId    String   @unique
+  createdAt DateTime @default(now())
+}
+
+model OauthAccount {
+  id                String    @id @default(cuid())
+  provider          String
+  providerAccountId String    @map("provider_account_id")
+  refresh_token     String?   @db.Text
+  access_token      String?   @db.Text
+  expires_at        DateTime?
+  user              User      @relation("oauthAccount", fields: [userId], references: [id], onDelete: Cascade)
+  userId            String    @unique
+}
+
+model Todo {
+  id        String   @id @default(cuid())
+  task      String
+  status    Status
+  user      User     @relation("todos", fields: [userId], references: [id], onDelete: Cascade)
+  userId    String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+enum Status {
+  PENDING
+  WORKING
+  COMPLETED
+}
